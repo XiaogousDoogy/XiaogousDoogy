@@ -1,0 +1,70 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Wed May  3 04:30:29 2023
+
+@author: hongyihu
+"""
+
+#Data Import & Column name acquired
+import pandas as pd
+df = pd.read_csv('Hongyi_Segmentation_CrowdDoing_2.csv', index_col=0)
+df.columns
+df.dtypes
+df.isnull().sum()
+#There are missing values
+temp = df.isna().any(axis=1)
+temp[temp].index
+#Dropping Missing Values
+df = df.drop(['17350 Locust','22200 Alderc'])
+
+#Clearify categorial vairables.
+from kmodes.kprototypes import KPrototypes
+df.columns.get_loc('Percentage_Vegetation')
+# Percentage_Vegetation Index: 4
+df.columns.get_loc('Defensible_Space')
+# Percentage_Vegetation Index: 8
+
+#Telling the algorithm what are categorical variables
+categorical_features_idx = list(range(4,9))
+mark_array=df.values
+
+#Set the cost to find out how many clusters is the best here.
+cost = []
+for cluster in range(2, 10):
+    kprototype = KPrototypes(n_clusters=cluster, verbose=2, max_iter=20,random_state=1)
+    kprototype.fit_predict(mark_array, categorical = categorical_features_idx)
+    cost.append(kprototype.cost_)
+
+#Visualized the cost, five clusters should be the optimized.
+import matplotlib.pyplot as plt
+plt.plot(range(2,10),cost)
+plt.xlabel('No of clusters')
+plt.ylabel('Cost')
+
+#Set the number of clusters to 5 and run the modeling.
+kprototype5 = KPrototypes(n_clusters=5, verbose=2, max_iter=20,random_state=1)
+kprototype5.fit_predict(mark_array, categorical = categorical_features_idx)
+
+#Label all the observations, find the average or mode then compare it with all the clusters.
+df['Labels'] = kprototype5.labels_
+P = pd.DataFrame(df.describe())
+P_Object = pd.DataFrame(df.describe(include='object'))
+#cluster 1
+C1 = pd.DataFrame(df.loc[df['Labels']==0].describe())
+C1_Object = pd.DataFrame(df.loc[df['Labels']==0].describe(include='object'))
+#cluster 2
+C2 = pd.DataFrame(df.loc[df['Labels']==1].describe())
+C2_Object = pd.DataFrame(df.loc[df['Labels']==1].describe(include='object'))
+#cluster 3
+C3 = pd.DataFrame(df.loc[df['Labels']==2].describe())
+C3_Object = pd.DataFrame(df.loc[df['Labels']==2].describe(include='object'))
+#cluster 4
+C4 = pd.DataFrame(df.loc[df['Labels']==3].describe())
+C4_Object = pd.DataFrame(df.loc[df['Labels']==3].describe(include='object'))
+#cluster 5
+C5 = pd.DataFrame(df.loc[df['Labels']==4].describe())
+C5_Object = pd.DataFrame(df.loc[df['Labels']==4].describe(include='object'))
+
+#Data output
+df.to_excel("Segmentation_output.xlsx")
